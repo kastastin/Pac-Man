@@ -31,7 +31,7 @@ class Pacman:
         self.gridCoordinate[1] = (self.pixelCoordinate[1] + SQUARE_HEIGHT // 2 - INDENT) // SQUARE_HEIGHT + 1
 
     def displayPacman(self):
-        self.playerImage = pygame.image.load('pacman.png')
+        self.playerImage = pygame.image.load('img/pacman.png')
         if self.direction == vec(0, -1):
             self.playerImage = pygame.transform.rotate(self.playerImage, 90)
         if self.direction == vec(0, 1):

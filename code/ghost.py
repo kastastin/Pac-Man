@@ -29,7 +29,7 @@ class Ghost:
         self.gridCoordinate[1] = (self.pixelCoordinate[1] - INDENT + SQUARE_HEIGHT // 2) // SQUARE_HEIGHT + 1
 
     def displayGhost(self):
-        self.playerImage = pygame.image.load('ghost.png')
+        self.playerImage = pygame.image.load('img/ghost.png')
         self.playerImage = pygame.transform.scale(self.playerImage, (SQUARE_WIDTH, SQUARE_HEIGHT))
         self.game.screen.blit(self.playerImage, (int(self.pixelCoordinate.x - INDENT // 5),int(self.pixelCoordinate.y - INDENT // 5)))    
 

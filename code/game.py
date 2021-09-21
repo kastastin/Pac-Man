@@ -2,11 +2,13 @@ import sys, pygame
 from settings import *
 from pacman import *
 from ghost import *
+from collections import deque 
 from pygame.math import Vector2 as vec 
 from random import shuffle, randrange
 from queue import PriorityQueue
 from time import time
 from random import choice
+
 
 
 
@@ -55,8 +57,8 @@ class Game:
     def saveVectorsAllObjects(self):
         self.background = pygame.image.load('img/gameBackground.jpg')
         self.background = pygame.transform.scale(self.background, (MAP_WIDTH, MAP_HEIGHT))
-        # self.generateLevel()
-        self.generateTxtFile()
+        self.generateLevel()
+        # self.generateTxtFile()
         # walls list with co-ords of walls stored as vectors
         with open("generator.txt", 'r') as file:
             for yIndex, line in enumerate(file):
@@ -127,18 +129,20 @@ class Game:
         self.state = "game"
 
 
-### GENERATE LEVEL ###################################################
+### GENERATOR ###################################################
 
 
     def generateLevel(self):
         rows, columns = 14, 7
-        horizontalWalls = [["ww"] * rows + ['ww'] for i in range(columns + 1)]
-        verticalWalls = [["wp"] * rows + ['ww'] for i in range(columns)]
-        checkedSquares = [[0] * rows + [1] for i in range(columns)] + [[1] * (rows + 1)]
+        horizontalWalls = [["ww"] * rows + ['ww'] for i in range(columns + 1)] # [['ww'], ['ww'] x14]
+                                                                               # [['ww'], ['ww'] x14]  | x8
+        verticalWalls = [["wp"] * rows + ['ww'] for i in range(columns)]       # [['wp'], ['wp'], [ww]]
+        checkedSquares = [[0] * rows + [1] for i in range(columns)] + [[1] * (rows + 1)] # 
+        # print(horizontalWalls)
         def step(x, y):
             checkedSquares[y][x] = 1
             directions = [(x - 1, y), (x, y + 1), (x + 1, y), (x, y - 1)]
-            shuffle(directions) # перемешать список
+            shuffle(directions) # перемешка списка
             for (xIndex, yIndex) in directions:
                 if checkedSquares[yIndex][xIndex]:
                     continue
@@ -149,23 +153,18 @@ class Game:
                 step(xIndex, yIndex)
         step(0, 0)
         data = ''
+        # сначало horizontalWalls 1 список, потом verticalWalls 1 список и в цикл
         for (a, b) in zip(horizontalWalls, verticalWalls):
             data += ''.join(a + ['\n'] + b + ['\n'])
         reversedData = data[::-1]
-        data = data + reversedData.lstrip()
-        data = data[:560] + 'U' + data[560+1:]
+        data = data + reversedData.lstrip() # удалить пробелы
+        data = data[:312] + 'U' + data[312+1:]
         data = data[:35] + '2' + data[35+1:]
         data = data[:36] + '3' + data[36+1:]
         data = data[:37] + '4' + data[37+1:]
         data = data[:38] + '5' + data[38+1:]
         with open("generator.txt", 'w') as txtFile:
             txtFile.write(data)
-
-
-######################################################
-
-
-
 
 
 ### MENU STATE #######################################################
@@ -209,7 +208,6 @@ class Game:
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_z:
                     self.changeTypeSearch(self.typeSearch)
                     
-
     def gameUpdate(self):
         self.Pacman.updatePacman()
         for ghost in self.ghosts:
@@ -224,11 +222,11 @@ class Game:
         if type == 'BFS':
             self.typeSearch = 'DFS'
         if type == 'DFS':
+            self.typeSearch = 'UCS'
+        if type == 'UCS':
             self.typeSearch = 'No'
-        # if self.typeSearch == 'BFS':
-        #     self.typeSearch = 'DFS'
-        # if self.typeSearch == 'DFS':
-        #     self.typeSearch = ''
+            
+            
 
     def gameDisplay(self):
         self.screen.fill(GAME_BACKGROUND_COLOUR)
@@ -236,26 +234,48 @@ class Game:
         self.displayLines()
         self.displayWalls()
 
-
         
+        # Path to all ghosts
 
-        # for ghost in self.ghosts:
-        #     if self.typeSearch == 'BFS':
-        #         self.showBFS(self.BFS([int(self.Pacman.gridCoordinate.x), int(self.Pacman.gridCoordinate.y)], [int(ghost.gridCoordinate.x), int(ghost.gridCoordinate.y)]))
-        #     elif self.typeSearch == 'DFS':
-        #         self.showDFS(self.DFS([int(self.Pacman.gridCoordinate.x), int(self.Pacman.gridCoordinate.y)], [int(ghost.gridCoordinate.x), int(ghost.gridCoordinate.y)]))
+        # if self.typeSearch == 'BFS':
+        #     timeStartBFS = time()
+        #     for ghost in self.ghosts:
+        #         self.showAlgorithm(self.useAlgorithm([int(self.Pacman.gridCoordinate.x), int(self.Pacman.gridCoordinate.y)], [int(ghost.gridCoordinate.x), int(ghost.gridCoordinate.y)], 'BFS'), BFS_COLOUR)
+        #     timeEndBFS = time()
+        #     self.speedSearch = timeEndBFS - timeStartBFS
 
-        # to 1 ghost
+        # elif self.typeSearch == 'DFS':
+        #     timeStartDFS = time()
+        #     for ghost in self.ghosts:
+        #         self.showAlgorithm(self.useAlgorithm([int(self.Pacman.gridCoordinate.x), int(self.Pacman.gridCoordinate.y)], [int(ghost.gridCoordinate.x), int(ghost.gridCoordinate.y)], 'DFS'), DFS_COLOUR)
+        #     timeEndDFS = time()
+        #     self.speedSearch = timeEndDFS - timeStartDFS
+
+        # elif self.typeSearch == 'UCS':
+        #     timeStartDFS = time()
+        #     for ghost in self.ghosts:
+        #         self.showUniform(self.useUniformCostSearch([int(self.Pacman.gridCoordinate.x), int(self.Pacman.gridCoordinate.y)], [int(ghost.gridCoordinate.x), int(ghost.gridCoordinate.y)]))
+        #     timeEndDFS = time()
+        #     self.speedSearch = timeEndDFS - timeStartDFS
+
+        # Path to 1 ghost
         if self.typeSearch == 'BFS':
             timeStartBFS = time()
-            self.showBFS(self.BFS([int(self.Pacman.gridCoordinate.x), int(self.Pacman.gridCoordinate.y)], [int(self.ghosts[0].gridCoordinate.x), int(self.ghosts[0].gridCoordinate.y)]))
+            self.showAlgorithm(self.useAlgorithm([int(self.Pacman.gridCoordinate.x), int(self.Pacman.gridCoordinate.y)], [int(self.ghosts[0].gridCoordinate.x), int(self.ghosts[0].gridCoordinate.y)], 'BFS'), BFS_COLOUR)
             timeEndBFS = time()
             self.speedSearch = timeEndBFS - timeStartBFS
         elif self.typeSearch == 'DFS':
             timeStartDFS = time()
-            self.showDFS(self.DFS([int(self.Pacman.gridCoordinate.x), int(self.Pacman.gridCoordinate.y)], [int(self.ghosts[0].gridCoordinate.x), int(self.ghosts[0].gridCoordinate.y)]))
+            self.showAlgorithm(self.useAlgorithm([int(self.Pacman.gridCoordinate.x), int(self.Pacman.gridCoordinate.y)], [int(self.ghosts[0].gridCoordinate.x), int(self.ghosts[0].gridCoordinate.y)], 'DFS'), DFS_COLOUR)
             timeEndDFS = time()
             self.speedSearch = timeEndDFS - timeStartDFS
+        elif self.typeSearch == 'UCS':
+            timeStartBFS = time()
+            self.showUniform(self.useUniformCostSearch([int(self.Pacman.gridCoordinate.x), int(self.Pacman.gridCoordinate.y)], [int(self.ghosts[0].gridCoordinate.x), int(self.ghosts[0].gridCoordinate.y)]))
+            timeEndBFS = time()
+            self.speedSearch = timeEndBFS - timeStartBFS
+
+
 
 
         self.draw_points()
@@ -336,33 +356,41 @@ class Game:
         pygame.display.update()
 
 
-### BFS ##########################################################################
+### BFS and DFS ##########################################################################
 
 
-    def BFS(self, start, target):
-        rows, columns = ROWS, COLUMNS
-        squares = [[0 for x in range(rows)] for x in range(columns)]
+    def useAlgorithm(self, start, target, type):
+        squares = [[0 for x in range(ROWS)] for x in range(COLUMNS)]  # [[0], [0], [0] x30]
         for wall in self.walls:
-            if wall.x < rows and wall.y < columns:
+            if wall.x < ROWS and wall.y < COLUMNS:
                 squares[int(wall.y)][int(wall.x)] = 1
         queue = [start]
         way, visitedSquares = [], []
         while queue:
-            currentQueueItem = queue[0]
-            queue.remove(queue[0])
-            visitedSquares.append(currentQueueItem)
-            if currentQueueItem == target:
-                break;
+            elementFromQueue = 0
+            if type == 'DFS':
+                elementFromQueue = len(queue) - 1
+            # take first elem
+            curQElement = queue[elementFromQueue]
+            queue.remove(queue[elementFromQueue])
+            visitedSquares.append(curQElement)
+            if curQElement == target:
+                break
             else:
                 neighbours = [[0, -1], [1, 0], [0, 1], [-1, 0]]
                 for neighbour in neighbours:
-                    if neighbour[0] + currentQueueItem[0] >= 0 and neighbour[0] + currentQueueItem[0] < len(squares):
-                        if neighbour[1] + currentQueueItem[1] >= 0 and neighbour[1] + currentQueueItem[1] < len(squares):
-                            nextCell = [neighbour[0] + currentQueueItem[0], neighbour[1] + currentQueueItem[1]]
-                            if nextCell not in visitedSquares:
-                                if squares[nextCell[1]][nextCell[0]] != 1:
-                                    queue.append(nextCell)
-                                    way.append({"Current": currentQueueItem, "Next": nextCell})
+                    # проверка (следующая клетка в поле by х?)
+                    if neighbour[0] + curQElement[0] >= 0 and neighbour[0] + curQElement[0] < len(squares):
+                        # проверка (следующая клетка в поле? by y)
+                        if neighbour[1] + curQElement[1] >= 0 and neighbour[1] + curQElement[1] < len(squares):
+                            # записать next клетку
+                            nextSquare = [neighbour[0] + curQElement[0], neighbour[1] + curQElement[1]]
+                            # если еще не был
+                            if nextSquare not in visitedSquares:
+                                # если следующая клетка не стенка
+                                if squares[nextSquare[1]][nextSquare[0]] != 1:
+                                    queue.append(nextSquare)
+                                    way.append({"Current": curQElement, "Next": nextSquare})
         shortest = [target]
         while target != start:
             for step in way:
@@ -371,109 +399,122 @@ class Game:
                     shortest.insert(0, step["Current"])
         return shortest
 
-    def showBFS(self, arr):
+    def showAlgorithm(self, arr, color):
         for cell in arr:
-            pygame.draw.rect(self.screen, BFS_COLOUR, (cell[0] * SQUARE_WIDTH + HALF_INDENT, cell[1] * SQUARE_HEIGHT + HALF_INDENT, SQUARE_WIDTH, SQUARE_HEIGHT), 5)
+            pygame.draw.rect(self.screen, color, (cell[0] * SQUARE_WIDTH + HALF_INDENT, cell[1] * SQUARE_HEIGHT + HALF_INDENT, SQUARE_WIDTH, SQUARE_HEIGHT), 5)
 
 
-### DFS ##########################################################################
+### Uniform Cost Search ##########################################################################
 
-    def DFS(self, start, target):
-        grid = [[0 for x in range(30)] for x in range(30)]
-        for cell in self.walls:
-            if cell.x < 30 and cell.y < 30:
-                grid[int(cell.y)][int(cell.x)] = 1
 
-        visited = []
-        path = []
-        fringe = PriorityQueue()
-        fringe.put((0, start, path, visited))
+    def useUniformCostSearch(self, start, target):
+        squares = [[0 for x in range(ROWS)] for x in range(COLUMNS)]
+        visitedSquares = [[0 for x in range(ROWS)] for x in range(COLUMNS)]
+        cost = [[0 for x in range(ROWS)] for x in range(COLUMNS)]
+        for step in self.walls:
+            if step[0] < 30 and step[1] < 30:
+                squares[int(step[1])][int(step[0])] = 1
 
-        while not fringe.empty():
-            depth, current, path, visited = fringe.get()
+        paths = []
 
-            if current == target:
-                return path + [current]
+        for i in range(31 * 31):
+            paths.append([0,0])
+        queue = deque()
+        bestWay = []
+        bestCost = 100000 
+        queue.append(start)
+        while queue:
+            current = queue.popleft() # получить 1 элемент и удалить с очереди
+            currentCost = -1
 
-            visited = visited + [current]
-            neighbours = [[0, -1], [1, 0], [0, 1], [-1, 0]]
+            for point in self.points:
+                # если текущая клетка в монетке
+                if point[0] == current[0] and point[1] == current[1]:
+                    currentCost -= 1
+
+            if current[0] == target[0] and current[1] == target[1]:
+                if bestCost > cost[current[1]][current[0]]:
+                    bestCost = cost[current[1]][current[0]]
+                    bestWay = []
+                    needCoord = current
+        
+                    while needCoord[0] != start[0] or needCoord[1] != start[1]:
+                        needCoord[0] = paths[needCoord[0] * 30 + needCoord[1]][0]
+                        needCoord[1] = paths[needCoord[0] * 30 + needCoord[1]][1]
+                        bestWay.append([needCoord[0], needCoord[1]])
+                        
+            neighbours = [[1, 0], [-1, 0], [0, -1], [0, 1]]
             for neighbour in neighbours:
-                if neighbour[0]+current[0] >= 0 and neighbour[0] + current[0] < len(grid[0]):
-                    if neighbour[1]+current[1] >= 0 and neighbour[1] + current[1] < len(grid):
-                        next_cell = [neighbour[0] + current[0], neighbour[1] + current[1]]
-                        if next_cell not in visited:
-                            if next_cell == target:
-                                return path + [next_cell]
-                            if grid[next_cell[1]][next_cell[0]] != 1:
-                                depth_of_node = len(path)
-                                fringe.put((-depth_of_node, next_cell, path + [next_cell], visited))
-
-        return path
-
-    def showDFS(self, arr):
-        for cell in arr:
-            pygame.draw.rect(self.screen, DFS_COLOUR, (cell[0] * SQUARE_WIDTH + HALF_INDENT, cell[1] * SQUARE_HEIGHT + HALF_INDENT, SQUARE_WIDTH, SQUARE_HEIGHT), 5)
-    
-    def replaceSignByIndex(self, str, index, sign):
-        str = str[:index] + f'{sign}' + str[index + 1:]
-        return str
-    
-    def generateTxtFile(self):
-        data = ''
-        for i in range(900):
-            if len(data) % 31 == 0:
-                data += '\n'
-            else:
-                data += 'w'
-        data = data.replace('\n', 'w' * 30 + '\n', 1)
-
-
-        coordsWithoutBorder = []
-        for y in range(32, 897, 31):
-            for x in range(y, y + 28):
-                data = self.replaceSignByIndex(data, x, 'p')
-                coordsWithoutBorder.append(x)
-        
-
-        def getRandomCoord():
-            return choice(coordsWithoutBorder)
-
-        startRandomCoordinates = []
-        for i in range(35):
-            startRandomCoordinates.append(getRandomCoord())
-            data = self.replaceSignByIndex(data, startRandomCoordinates[i], 'w')
-            if startRandomCoordinates[i] + 1 in coordsWithoutBorder:
-                data = self.replaceSignByIndex(data, startRandomCoordinates[i] + 1, 'w')
-            if startRandomCoordinates[i] + 3 in coordsWithoutBorder:
-                data = self.replaceSignByIndex(data, startRandomCoordinates[i] + 3, 'w')
-            if startRandomCoordinates[i] + 5 in coordsWithoutBorder:
-                data = self.replaceSignByIndex(data, startRandomCoordinates[i] + 5, 'w')
-            if startRandomCoordinates[i] - 1 in coordsWithoutBorder:
-                data = self.replaceSignByIndex(data, startRandomCoordinates[i] - 1, 'w')
-            if startRandomCoordinates[i] - 3 in coordsWithoutBorder:
-                data = self.replaceSignByIndex(data, startRandomCoordinates[i] - 3, 'w')
-            if startRandomCoordinates[i] - 5 in coordsWithoutBorder:
-                data = self.replaceSignByIndex(data, startRandomCoordinates[i] - 5, 'w')
-            # if startRandomCoordinates[i] - 31 in coordsWithoutBorder:
-            #     data = self.replaceSignByIndex(data, startRandomCoordinates[i] - 31, 'w')
-            # if startRandomCoordinates[i] - 62 in coordsWithoutBorder:
-            #     data = self.replaceSignByIndex(data, startRandomCoordinates[i] - 62, 'w')
-            # if startRandomCoordinates[i] + 31 in coordsWithoutBorder:
-            #     data = self.replaceSignByIndex(data, startRandomCoordinates[i] + 31, 'w')
+                if neighbour[0] + current[0] >= 0 and visitedSquares[current[1]][neighbour[0] + current[0]] == 0 and neighbour[0] + current[0] < 30:
+                        if squares[current[1]][neighbour[0] + current[0]] != 1:
+                            paths[(neighbour[0] + current[0])*30 + current[1]] = [current[0], current[1]]
+                            visitedSquares[current[1]][neighbour[0] + current[0]] = 1
+                            cost[current[1]][neighbour[0] + current[0]] -= currentCost
+                            queue.append([neighbour[0] + current[0], current[1]])
+                elif neighbour[1] + current[1] >= 0 and visitedSquares[neighbour[1] + current[1]][current[0]] == 0 and neighbour[1] + current[1] < 30:
+                        if squares[neighbour[1] + current[1]][current[0]] != 1:
+                            paths[(current[0])*30 + neighbour[1] + current[1]] = [current[0], current[1]]
+                            visitedSquares[neighbour[1] + current[1]][current[0]] = 1
+                            cost[neighbour[1] + current[1]][current[0]] -= currentCost
+                            queue.append([current[0], neighbour[1] + current[1]])
                 
+        return bestWay
 
+    def showUniform(self, arr):
+        for cell in arr:
+            pygame.draw.rect(self.screen, UCS_COLOUR, (cell[0] * SQUARE_WIDTH + HALF_INDENT, cell[1] * SQUARE_HEIGHT + HALF_INDENT, SQUARE_WIDTH, SQUARE_HEIGHT), 5)
+    
+
+### GENERATOR #################################################################
+    # def replaceSignByIndex(self, str, index, sign):
+    #     str = str[:index] + f'{sign}' + str[index + 1:]
+    #     return str
+    
+    # def generateTxtFile(self):
+    #     data = ''
+    #     for i in range(900):
+    #         if len(data) % 31 == 0:
+    #             data += '\n'
+    #         else:
+    #             data += 'w'
+    #     data = data.replace('\n', 'w' * 30 + '\n', 1)
+
+
+    #     coordsWithoutBorder = []
+    #     for y in range(32, 897, 31):
+    #         for x in range(y, y + 28):
+    #             data = self.replaceSignByIndex(data, x, 'p')
+    #             coordsWithoutBorder.append(x)
         
 
-        data = self.replaceSignByIndex(data, 883, 'U')
-        data = self.replaceSignByIndex(data, 71, '2')
-        data = self.replaceSignByIndex(data, 73, '3')
-        data = self.replaceSignByIndex(data, 75, '4')
-        data = self.replaceSignByIndex(data, 78, '5')
+    #     def getRandomCoord():
+    #         return choice(coordsWithoutBorder)
 
-        with open("generator.txt", 'w') as txtFile:
-                txtFile.write(data)
+    #     startRandomCoordinates = []
+    #     for i in range(35):
+    #         startRandomCoordinates.append(getRandomCoord())
+    #         data = self.replaceSignByIndex(data, startRandomCoordinates[i], 'w')
+    #         if startRandomCoordinates[i] + 1 in coordsWithoutBorder:
+    #             data = self.replaceSignByIndex(data, startRandomCoordinates[i] + 1, 'w')
+    #         if startRandomCoordinates[i] + 3 in coordsWithoutBorder:
+    #             data = self.replaceSignByIndex(data, startRandomCoordinates[i] + 3, 'w')
+    #         if startRandomCoordinates[i] + 5 in coordsWithoutBorder:
+    #             data = self.replaceSignByIndex(data, startRandomCoordinates[i] + 5, 'w')
+    #         if startRandomCoordinates[i] - 1 in coordsWithoutBorder:
+    #             data = self.replaceSignByIndex(data, startRandomCoordinates[i] - 1, 'w')
+    #         if startRandomCoordinates[i] - 3 in coordsWithoutBorder:
+    #             data = self.replaceSignByIndex(data, startRandomCoordinates[i] - 3, 'w')
+    #         if startRandomCoordinates[i] - 5 in coordsWithoutBorder:
+    #             data = self.replaceSignByIndex(data, startRandomCoordinates[i] - 5, 'w')
+                
+    #     data = self.replaceSignByIndex(data, 883, 'U')
+    #     data = self.replaceSignByIndex(data, 71, '2')
+    #     data = self.replaceSignByIndex(data, 73, '3')
+    #     data = self.replaceSignByIndex(data, 75, '4')
+    #     data = self.replaceSignByIndex(data, 78, '5')
 
-
+    #     with open("generator.txt", 'w') as txtFile:
+    #             txtFile.write(data)
 
 
 pygame.init()
