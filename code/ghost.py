@@ -8,33 +8,35 @@ class Ghost:
         self.game = game
         self.startingCoordinate = [position.x, position.y]
         self.gridCoordinate = position
-        self.aStar = Astar(None, None)
-        self.type = type
         self.direction = vector(0, 0)
-        self.pixelCoordinate = self.getPixelCoordinate()
-        
         self.target = None
+        self.aStar = Astar(None, None)
+        self.pixelCoordinate = self.getPixelCoordinate()
+
+
+#################### Get pixel co-rds ####################
 
     def getPixelCoordinate(self):
         return vector((self.gridCoordinate.x * SQUARE_WIDTH) + HALF_INDENT + SQUARE_WIDTH // 2, (self.gridCoordinate.y * SQUARE_HEIGHT) + HALF_INDENT + SQUARE_HEIGHT // 2)
 
+
+#################### UPDATE ####################
+
+
     def updateGhost(self):
-        self.target = self.set_target()
+        self.target = self.setTarget()
         if self.target != self.gridCoordinate:   
             self.pixelCoordinate += self.direction
             if self.isTimeToMove():
                 self.move()
         self.gridCoordsToPixelCoords()
 
-    # set grid position in reference to pixel position
-    def gridCoordsToPixelCoords(self):
-        self.gridCoordinate[0] = (self.pixelCoordinate[0] - INDENT + SQUARE_WIDTH // 2) // SQUARE_WIDTH + 1
-        self.gridCoordinate[1] = (self.pixelCoordinate[1] - INDENT + SQUARE_HEIGHT // 2) // SQUARE_HEIGHT + 1
 
-    def displayGhost(self):
-        self.playerImage = pygame.image.load('img/ghost.png')
-        self.playerImage = pygame.transform.scale(self.playerImage, (SQUARE_WIDTH, SQUARE_HEIGHT))
-        self.game.screen.blit(self.playerImage, (int(self.pixelCoordinate.x - INDENT // 5),int(self.pixelCoordinate.y - INDENT // 5)))    
+#################### ... ####################
+
+
+    def setTarget(self):
+        return self.game.Pacman.gridCoordinate    
 
     def isTimeToMove(self):
         if int(self.pixelCoordinate.x + INDENT // 2) % SQUARE_WIDTH == 0:
@@ -46,107 +48,129 @@ class Ghost:
         return False
 
     def move(self):
-        self.direction = self.get_path_direction(self.target)
+        self.direction = self.getPathDirection(self.target)
 
-    def set_target(self):
-        return self.game.Pacman.gridCoordinate
+    def getPathDirection(self, target):
+        nextSquare = self.getNextSquare(target)
+        x = nextSquare[1] - self.gridCoordinate[0]
+        y = nextSquare[0] - self.gridCoordinate[1]
+        return vector(x, y)
 
-    def get_path_direction(self, target):
-        next_cell = self.find_next_cell_in_path(target)
-        xdir = next_cell[1] - self.gridCoordinate[0]
-        ydir = next_cell[0] - self.gridCoordinate[1]
-        return vector(xdir, ydir)
-
-    def find_next_cell_in_path(self, target):
-        grid = [[0 for x in range(28)] for x in range(30)]
+    def getNextSquare(self, target):
+        map = [[0 for x in range(30)] for x in range(30)]
         for step in self.game.walls:
-            if step[0] < 28 and step[1] < 30:
-                grid[int(step[1])][int(step[0])] = 1
-        path = self.aStar.astar(grid, (int(self.gridCoordinate[1]), int(self.gridCoordinate[0])), (int(target[1]), int(target[0])))
+            if step[0] < 30 and step[1] < 30:
+                map[int(step[1])][int(step[0])] = 1
+        path = self.aStar.astar(map, (int(self.gridCoordinate[1]), int(self.gridCoordinate[0])), (int(target[1]), int(target[0])))
         return path[1]
+
+    def gridCoordsToPixelCoords(self):
+        self.gridCoordinate[0] = (self.pixelCoordinate[0] - INDENT + SQUARE_WIDTH // 2) // SQUARE_WIDTH + 1
+        self.gridCoordinate[1] = (self.pixelCoordinate[1] - INDENT + SQUARE_HEIGHT // 2) // SQUARE_HEIGHT + 1
+
+
+#################### DISPLAY ####################
+
+
+    def displayGhost(self):
+        self.playerImage = pygame.image.load('img/ghost.png')
+        self.playerImage = pygame.transform.scale(self.playerImage, (SQUARE_WIDTH, SQUARE_HEIGHT))
+        self.game.screen.blit(self.playerImage, (int(self.pixelCoordinate.x - INDENT // 5),int(self.pixelCoordinate.y - INDENT // 5)))
+
+
 ################  A*  #################  
 
+
 class Astar:
-    def __init__(self, beforeCoordinate, coordinate):
-        self.beforeCoordinate = beforeCoordinate
-        self.coordinate = coordinate
-        self.g = 0
-        self.h = 0
-        self.f = 0
+    def __init__(self, parent, pos):
+        self.parent = parent
+        self.pos = pos
+        self.f = 0   # общая стоимость пути
+        self.g = 0   # стоимость между текущей и начальной вершиной
+        self.h = 0   # эвристическая функция (туорема Пифагора)
 
     def __eq__(self, other):
-        return self.coordinate == other.coordinate
+        return self.pos == other.pos
 
-    def astar(self, grid, start, end):
-        indexList = []
-        nodeList = []
+    def astar(self, field, firstTarget, lastTarget): # f = g + h (такой же как bfs, только юзаем эврестическую формулу и выбираем наименбшую f)
+        uncheckedCoords = [] # непроверенные координаты
+        checkedCoords = []   # проверенные координаты
+        step = 0 # итерации
+        neighbours = ((0, -1), (1, 0), (0, 1), (-1, 0))
+        stepLimit = (len(field) // 2) ** 2 # формула
+        firstTop = Astar(None, firstTarget)
+        firstTop.f = 0
+        firstTop.g = 0
+        firstTop.h = 0
+        lastTop = Astar(None, lastTarget)
+        lastTop.f = 0
+        lastTop.g = 0
+        lastTop.h = 0
+        uncheckedCoords.append(firstTop)
 
-        currentStage = 0
-        neighbours = ((0, -1), (0, 1), (-1, 0), (1, 0))
-        maxStage = (len(grid) // 2) ** 2
+        while uncheckedCoords:
+            step += 1 # 
+            currChecked = uncheckedCoords[0]
+            currUnchecked = 0
 
-        endSearch = Astar(None, end)
-        startSearch = Astar(None, start)
-        startSearch.g = startSearch.h = startSearch.f = 0
-        endSearch.g = endSearch.h = endSearch.f = 0
-        indexList.append(startSearch)
+            for i, coord in enumerate(uncheckedCoords):
+                if coord.f < currChecked.f:           # сравниваем значение f
+                    currChecked = coord
+                    currUnchecked = i 
 
-        while len(indexList) > 0:
-            currentStage += 1
-            currentNode = indexList[0]
-            currentIndex = 0
-
-            for index, item in enumerate(indexList):
-                if item.f < currentNode.f:
-                    currentNode = item
-                    currentIndex = index
-                    
-            if currentStage > maxStage:
+            if step > stepLimit: # возвращаем путь, который нашли (с конца)
                 path = []
-                current = currentNode
+                currTop = currChecked
                 
-                while current is not None:
-                    path.append(current.coordinate)
-                    current = current.beforeCoordinate
+                while currTop is not None:
+                    path.append(currTop.pos)
+                    currTop = currTop.parent
                 return path[::-1] 
 
-            indexList.pop(currentIndex)
-            nodeList.append(currentNode)
+            uncheckedCoords.pop(currUnchecked)
+            checkedCoords.append(currChecked)
 
-            if currentNode == endSearch:
+            if currChecked == lastTop:
                 path = []
-                current = currentNode
-                
-                while current is not None:
-                    path.append(current.coordinate)
-                    current = current.beforeCoordinate
+                currTop = currChecked
+                while currTop is not None:
+                    path.append(currTop.pos)
+                    currTop = currTop.parent
                 return path[::-1]
 
-            children = []
+            # генерация детей
+            childrens = []
 
-            for next in neighbours:
-                currenNodeCoordinate = (currentNode.coordinate[0] + next[0], currentNode.coordinate[1] + next[1])
+            for neighbour in neighbours:
+                top = (currChecked.pos[0] + neighbour[0], currChecked.pos[1] + neighbour[1])
 
-                inGraph = [currenNodeCoordinate[0] > (len(grid) - 1), currenNodeCoordinate[0] < 0, currenNodeCoordinate[1] > (len(grid[len(grid) - 1]) - 1), currenNodeCoordinate[1] < 0]
-                
-                if any(inGraph):
-                    continue
-                if grid[currenNodeCoordinate[0]][currenNodeCoordinate[1]] != 0:
-                    continue
+                isInRange = [
+                    top[0] < 0,
+                    top[1] < 0,
+                    top[0] > (len(field) - 1),
+                    top[1] > (len(field[len(field) - 1]) - 1)
+                ]
 
-                newSearch = Astar(currentNode, currenNodeCoordinate)
-
-                children.append(newSearch)
-
-            for child in children:
-                if len([nodeChild for nodeChild in nodeList if nodeChild == child]) > 0:
+                if any(isInRange): # если в графе
                     continue
 
-                child.g = currentNode.g + 1
-                child.h = ((child.coordinate[0] - endSearch.coordinate[0]) ** 2) + ((child.coordinate[1] - endSearch.coordinate[1]) ** 2)
-                child.f = child.g + child.h
-
-                if len([indexChild for indexChild in indexList if child == indexChild and child.g > indexChild.g]) > 0:
+                if field[top[0]][top[1]] != 0:
                     continue
 
-                indexList.append(child)
+                newTop = Astar(currChecked, top)
+
+                childrens.append(newTop)
+
+            for child in childrens:
+                if len([nodeChild for nodeChild in checkedCoords if nodeChild == child]) > 0:
+                    continue
+
+                child.g = currChecked.g + 1 # первая точка
+                # теорема пифагора
+                child.h = ((child.pos[0] - lastTop.pos[0]) ** 2) + ((child.pos[1] - lastTop.pos[1]) ** 2)
+                child.f = child.g + child.h # child.g - точка, с которой начинаем обход
+
+                if len([indexChild for indexChild in uncheckedCoords if child == indexChild and child.g > indexChild.g]) > 0: # ссравниваем типа f
+                    continue
+
+                uncheckedCoords.append(child)

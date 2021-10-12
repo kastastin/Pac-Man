@@ -1,4 +1,4 @@
-import sys, pygame, random
+import sys, pygame
 from pygame.math import Vector2 as vector
 from generatorLevel import *
 from settings import *
