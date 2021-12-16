@@ -1,7 +1,7 @@
 import pygame, random
-from pygame.math import Vector2 as vector
 from settings import *
- 
+from pygame.math import Vector2 as vector
+
 
 class Ghost:
     def __init__(self, game, position, number):
@@ -10,32 +10,33 @@ class Ghost:
         self.gridCoordinate = position
         self.direction = vector(0, 0)
         self.target = None
-        self.minmax = Minimax(None, None)
+        self.astar = Astar(None, None)
         self.pixelCoordinate = self.getPixelCoordinate()
         self.number = number
         self.mode = self.ghostMode()
+        self.speed = 4
         
 
+    ##########  Get pixel co-rds  ##########
 
-#################### Get pixel co-rds ####################
 
     def getPixelCoordinate(self):
         return vector((self.gridCoordinate.x * SQUARE_WIDTH) + HALF_INDENT + SQUARE_WIDTH // 2, (self.gridCoordinate.y * SQUARE_HEIGHT) + HALF_INDENT + SQUARE_HEIGHT // 2)
 
 
-#################### UPDATE ####################
+    ############  Update Ghost  ############
 
 
     def updateGhost(self):
         self.target = self.setTarget()
         if self.target != self.gridCoordinate:   
-            self.pixelCoordinate += self.direction * 4
+            self.pixelCoordinate += self.direction * self.speed
             if self.isTimeToMove():
                 self.move()
         self.gridCoordsToPixelCoords()
 
 
-#################### ... ####################
+    ################  Move  ################
 
 
     def setTarget(self):
@@ -68,7 +69,7 @@ class Ghost:
         for step in self.game.walls:
             if step[0] < 30 and step[1] < 30:
                 map[int(step[1])][int(step[0])] = 1
-        path = self.minmax.minimax(map, (int(self.gridCoordinate[1]), int(self.gridCoordinate[0])), (int(target[1]), int(target[0])))
+        path = self.astar.run_astar(map, (int(self.gridCoordinate[1]), int(self.gridCoordinate[0])), (int(target[1]), int(target[0])))
         return path[1]
 
     def gridCoordsToPixelCoords(self):
@@ -98,7 +99,7 @@ class Ghost:
          return "speedy"
 
 
-#################### DISPLAY ####################
+    ##############  Display  ###############
 
 
     def displayGhost(self):
@@ -107,31 +108,10 @@ class Ghost:
         self.game.screen.blit(self.playerImage, (int(self.pixelCoordinate.x - INDENT // 5),int(self.pixelCoordinate.y - INDENT // 5)))
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-################  minimax  #################  
+    #################  A*  #################
 
     def Alg(self, start, target):
-            map = [[0 for x in range(ROWS)] for x in range(COLUMNS)]  # [[0], [0], [0] x30]
+            map = [[0 for x in range(ROWS)] for x in range(COLUMNS)]
             for wall in self.game.walls:
                 if wall.x < ROWS and wall.y < COLUMNS:
                     map[int(wall.y)][int(wall.x)] = 1
@@ -162,7 +142,7 @@ class Ghost:
                         shortest.insert(0, step["Current"])
             return shortest
 
-class Minimax:
+class Astar:
     def __init__(self, parent, pos):
         self.parent = parent
         self.pos = pos
@@ -173,17 +153,17 @@ class Minimax:
     def __eq__(self, other):
         return self.pos == other.pos
 
-    def minimax(self, field, firstTarget, lastTarget): # f = g + h (такой же как bfs, только юзаем эврестическую формулу и выбираем наименбшую f)
+    def run_astar(self, field, firstTarget, lastTarget): # f = g + h (такой же как bfs, только юзаем эврестическую формулу и выбираем наименбшую f)
         uncheckedCoords = [] # непроверенные координаты
         checkedCoords = []   # проверенные координаты
         step = 0 # итерации
         neighbours = ((0, -1), (1, 0), (0, 1), (-1, 0))
         stepLimit = (len(field) // 2) ** 2 # формула
-        firstTop = Minimax(None, firstTarget)
+        firstTop = Astar(None, firstTarget)
         firstTop.f = 0
         firstTop.g = 0
         firstTop.h = 0
-        lastTop = Minimax(None, lastTarget)
+        lastTop = Astar(None, lastTarget)
         lastTop.f = 0
         lastTop.g = 0
         lastTop.h = 0
@@ -238,7 +218,7 @@ class Minimax:
                 if field[top[0]][top[1]] != 0:
                     continue
 
-                newTop = Minimax(currChecked, top)
+                newTop = Astar(currChecked, top)
 
                 childrens.append(newTop)
 

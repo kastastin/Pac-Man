@@ -1,4 +1,5 @@
-# screen
+##############  Screen  ##############
+
 WINDOW_WIDTH = 670
 WINDOW_HEIGHT = 670
 INDENT = 50
@@ -13,36 +14,16 @@ X_LINE = WINDOW_WIDTH // SQUARE_WIDTH
 Y_LINE = WINDOW_HEIGHT // SQUARE_HEIGHT
 FPS = 60
 
+##############  Colors  ##############
 
-# colours
-MENU_BACKGROUND_COLOUR = (0, 0, 0)
-MENU_TEXT_COLOUR = (255, 255, 255)
+PACMAN_COLOR = (193, 191, 12)
+WALL_COLOR = (188,143,143)
+POINT_COLOR = (148,0,211)
+LINES_COLOR = (105, 105, 105)
+BACKGROUND_COLOR = (0, 0, 0)
+TEXT_COLOR = (255, 255, 255)
 
-GAME_BACKGROUND_COLOUR = (0, 0, 0)
-WALL_COLOUR = (135, 113, 222)
-SCORE_COLOUR = (255, 255, 255)
-POINT_COLOUR = (124, 123, 7)
+##############  Fonts  ##############
 
-RESULT_BACKGROUND_COLOUR = (0, 0, 0)
-RESULT_TEXT_COLOUR = (255, 255, 255)
-RESULT_COLOUR = (190, 190, 190)
-
-LINES_COLOUR = (105, 105, 105)
-
-
-PACMAN_COLOUR = (193, 191, 12)
-
-BFS_COLOUR = (181, 20, 111)
-DFS_COLOUR = (64, 140, 13)
-UCS_COLOUR = (240, 252, 3)
-
-
-
-# fonts
-menu_TEXT_SIZE = 16
-menu_FONT = 'arial black'
-
-# text
-PLAY_AGAIN_TEXT = 'Press <enter> to start play'
-PLAY_NEXT_LEVEL_TEXT = 'Press <enter> to start a new level'
-EXIT_TEXT = 'Press <esc> to exit game'
+TEXT_SIZE = 16
+FONT = 'arial black'
